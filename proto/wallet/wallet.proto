@@ -1,0 +1,253 @@
+syntax = "proto3";
+
+package catwin.wallet.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/murkotick/catwin-protos/gen/go/wallet";
+
+service WalletService {
+	rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+	rpc GetWallet(GetWalletRequest) returns (GetWalletResponse);
+
+	rpc CreateWallet(CreateWalletRequest) returns (CreateWalletResponse);
+	rpc Deposit(DepositRequest) returns (DepositResponse);
+	rpc Withdraw(WithdrawRequest) returns (WithdrawResponse);
+
+	rpc PlaceHold(PlaceHoldRequest) returns (PlaceHoldResponse);
+	rpc CaptureHold(CaptureHoldRequest) returns (CaptureHoldResponse);
+	rpc ReleaseHold(ReleaseHoldRequest) returns (ReleaseHoldResponse);
+
+	rpc GetTransactionHistory(GetTransactionHistoryRequest) returns (GetTransactionHistoryResponse);
+	rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+}
+
+message Wallet {
+	string wallet_id = 1;
+	string user_id = 2;
+	
+	int64 balance_cents = 3;
+	int64 available_balance_cents = 4;
+	
+	Currency currency = 5;
+	
+	WalletStatus status = 6;
+	
+	google.protobuf.Timestamp created_at = 7;
+	google.protobuf.Timestamp updated_at = 8;
+}
+
+enum WalletStatus {
+	WALLET_STATUS_ACTIVED = 0;
+	WALLET_STATUS_SUSPENDED = 1;
+	WALLET_STATUS_CLOSED = 2;
+}
+
+enum Currency {
+	USD = 0;
+	EUR = 1;
+	GBP = 2;
+}
+
+message Transaction {
+	string transaction_id = 1;
+	string wallet_id = 2;
+	
+	TransactionType type = 3;
+	
+	int64 amount_cents = 4;
+
+	Currency currency = 5;
+
+	int64 balance_after_cents = 6;
+	
+	string idempotency_key = 7;
+	Source source = 8;
+	string description = 9;
+
+	map<string, string> metadata = 10;
+
+	google.protobuf.Timestamp created_at = 11;
+
+	string captured_hold_id = 12;
+}
+
+enum TransactionType {
+	TRANSACTION_TYPE_DEPOSIT = 0;
+	TRANSACTION_TYPE_WITHDRAW = 1;
+	TRANSACTION_TYPE_BET_DEBIT = 2;
+	TRANSACTION_TYPE_WIN_CREDIT = 3;
+	TRANSACTION_TYPE_REFUND = 4;
+}
+
+enum Source {
+	bettingService = 0;
+	eventsService = 1;
+	oddsService = 2;
+	userService = 3;
+	walletService = 4;
+}
+
+message Hold {
+	string hold_id = 1;
+	string wallet_id = 2;
+	int64 amount_cents = 3;
+	Currency currency = 4;
+	
+	string reason = 5;
+	
+	Source source = 6;
+	
+	map<string, string> metadata = 7;
+
+	google.protobuf.Timestamp created_at = 8;
+	google.protobuf.Timestamp expires_at = 9;
+}
+
+message GetBalanceRequest {
+	string wallet_id = 1;
+}
+
+message GetBalanceResponse {
+	int64 available_balance_cents = 1;
+	Currency currency = 2;
+}
+
+message GetWalletRequest {
+	string wallet_id = 1;
+}
+
+message GetWalletResponse {
+	Wallet wallet = 1;
+}
+
+message CreateWalletRequest {
+	string user_id = 1;
+	Currency currency = 2;
+	string idempotency_key = 3;
+}
+
+message CreateWalletResponse {
+	Wallet wallet = 1;
+}
+
+message DepositRequest {
+	string wallet_id = 1;
+	
+	int64 amount_cents = 2;
+	Currency currency = 3;
+
+	string idempotency_key = 4;
+
+	Source source = 5;
+
+	string description = 6;
+
+	map<string, string> metadata = 7; 
+}
+
+message DepositResponse {
+	Transaction transaction = 1;
+
+	int64 new_balance_cents = 2;
+}
+
+message WithdrawRequest {
+	string wallet_id = 1;
+	
+	int64 amount_cents = 2;
+	Currency currency = 3;
+	string idempotency_key = 4;
+
+	string destination = 5;
+
+	string description = 6;
+
+	map<string, string> metadata = 7;
+}
+
+message WithdrawResponse {
+	Transaction transaction = 1;
+
+	int64 new_balance_cents = 2;
+}
+
+message PlaceHoldRequest {
+	string wallet_id = 1;
+
+	string hold_id = 2;
+
+	int64 amount_cents = 3;
+	Currency currency = 4;
+
+	Source source = 5;
+
+	map<string, string> metadata = 7;
+
+	int32 expiry_seconds = 8;
+}
+
+message PlaceHoldResponse {
+	Hold hold = 1;
+
+	int64 new_available_balance_cents = 2;
+}
+
+message ReleaseHoldRequest {
+	string wallet_id = 1;
+
+	string hold_id = 2;
+
+	string reason = 3;
+}
+
+message ReleaseHoldResponse {
+	Hold released_hold = 1;
+
+	int64 new_available_balance_cents = 2;
+}
+
+message CaptureHoldRequest {
+	string wallet_id = 1;
+
+	string hold_id = 2;
+
+	int64 amount_cents = 3;
+	string description = 4;
+
+	map<string, string> metadata = 5;
+}
+
+message CaptureHoldResponse {
+	Transaction transaction = 1;
+
+	Hold captured_hold = 2;
+
+	int64 new_balance_cents = 3;
+}
+
+message GetTransactionHistoryRequest {
+	string wallet_id = 1;
+
+	repeated TransactionType types = 2;
+
+	int32 page_size = 3;
+
+	string page_token = 4;
+}
+
+message GetTransactionHistoryResponse {
+	repeated Transaction transactions = 1;
+
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+}
+
+message GetTransactionRequest {
+	string transaction_id = 1;
+}
+
+message GetTransactionResponse {
+	Transaction transaction = 1;
+}
