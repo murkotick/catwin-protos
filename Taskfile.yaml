@@ -1,0 +1,197 @@
+version: '3'
+
+# set method to none for the visual effect
+# do not use in real projects
+method: none
+
+vars:
+  PROTO_DIRECTORY: proto
+
+  GEN_DIRECTORY: gen
+
+  SYSTEM_INCLUDE: /usr/include
+
+  PROTO_FILES:
+    sh: find {{.PROTO_DIRECTORY}} -name "*.proto"
+
+tasks:
+  default:
+    desc: Generate all proto files for all services
+    cmds:
+      - task: generate-all
+  
+  generate-all:
+    desc: Generate Go code from all proto files
+    deps:
+      - check-tools
+      - clean-generated
+    cmds:
+      - task: generate-user
+      - task: generate-wallet
+      - task: generate-events
+      # TODO
+      # task: generate-betting
+      # task: generate-odds
+    silent: false
+  
+  generate-user:
+    desc: Generate Go code for user service
+    sources:
+      - "{{.PROTO_DIRECTORY}}/user/*.proto"
+    generates:
+      - "{{.GEN_DIRECTORY}}/go/user/*.pb.go"
+      - "{{.GEN_DIRECTORY}}/go/user/*_grpc.pb.go"
+    cmds:
+      - echo "Generating user service"
+      - |
+        protoc \
+          --go_out={{.GEN_DIRECTORY}}/go \
+          --go_opt=paths=source_relative \
+          --go-grpc_out={{.GEN_DIRECTORY}}/go \
+          --go-grpc_opt=paths=source_relative \
+          --proto_path={{.PROTO_DIRECTORY}} \
+          --proto_path={{.SYSTEM_INCLUDE}} \
+          {{.PROTO_DIRECTORY}}/user/*.proto
+      - echo "User service generation complete"
+  
+  generate-wallet:
+    desc: Generate Go code for wallet service
+    sources:
+      - "{{.PROTO_DIRECTORY}}/wallet/*.proto"
+    generates:
+      - "{{.GEN_DIRECTORY}}/go/wallet/*.pb.go"
+      - "{{.GEN_DIRECTORY}}/go/wallet/*_grpc.pb.go"
+    cmds:
+      - echo "Generating wallet service"
+      - |
+        protoc \
+          --go_out={{.GEN_DIRECTORY}}/go \
+          --go_opt=paths=source_relative \
+          --go-grpc_out={{.GEN_DIRECTORY}}/go \
+          --go-grpc_opt=paths=source_relative \
+          --proto_path={{.PROTO_DIRECTORY}} \
+          --proto_path={{.SYSTEM_INCLUDE}} \
+          {{.PROTO_DIRECTORY}}/wallet/*.proto
+      - echo "Wallet service generation complete"
+  
+  generate-events:
+    desc: Generate Go code for events service
+    sources:
+      - "{{.PROTO_DIRECTORY}}/events/*.proto"
+    generates:
+      - "{{.GEN_DIRECTORY}}/go/events/*.pb.go"
+      - "{{.GEN_DIRECTORY}}/go/events/*_grpc.pb.go"
+    cmds:
+      - echo "Generating events service"
+      - |
+        protoc \
+          --go_out={{.GEN_DIRECTORY}}/go \
+          --go_opt=paths=source_relative \
+          --go-grpc_out={{.GEN_DIRECTORY}}/go \
+          --go-grpc_opt=paths=source_relative \
+          --proto_path={{.PROTO_DIRECTORY}} \
+          --proto_path={{.SYSTEM_INCLUDE}} \
+          {{.PROTO_DIRECTORY}}/events/*.proto
+      - echo "Events service generation complete"
+  
+  # TODO
+  # generate-betting:
+
+  # TODO
+  # generate-odds:
+
+  check-tools:
+    desc: Verify that required code generation tools are installed
+    cmds:
+      - echo "Checking for required tools... "
+      # this is the case for Fedora
+      - |
+        command -v \
+          protoc >/dev/null 2>&1 || \
+          { \
+            echo "protoc not found. \
+            Install with: sudo dnf install protobuf-compiler protobuf-devel"; \
+            exit 1; \
+          }
+      - |
+        command -v \
+          protoc-gen-go >/dev/null 2>&1 || \
+          { \
+            echo "protoc-gen-go not found. \
+            Install with: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"; \
+            exit 1; \
+          }
+      - |
+        command -v \
+          protoc-gen-go-grpc >/dev/null 2>&1 || \
+          { \
+            echo "protoc-gen-go-grpc not found. \
+            Install with: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest"; \
+            exit 1; \
+          }
+      - echo "All required tools are installed"
+    silent: false
+  
+  clean-generated:
+    desc: Remove all generated proto files
+    cmds:
+      - echo "Cleaning generated files... "
+      - rm -rf {{.GEN_DIRECTORY}}/go/user/*
+      - rm -rf {{.GEN_DIRECTORY}}/go/wallet/*
+      - rm -rf {{.GEN_DIRECTORY}}/go/events/*
+      # rm -rf {{.GEN_DIRECTORY}}/go/betting/*
+      # rm -rf {{.GEN_DIRECTORY}}/go/odds/*
+      - echo "Generated files cleaned"
+  
+  validate:
+    desc: Validate proto files syntax without generating code
+    cmds:
+      - echo "Validating proto files... "
+      - |
+        protoc \
+          --descriptor_set_out=/dev/null \
+          --proto_path={{.PROTO_DIRECTORY}} \
+          --proto_path={{.SYSTEM_INCLUDE}} \
+          {{.PROTO_DIRECTORY}}/**/*.proto
+      - echo "All proto files are valid"
+  
+  list-protos:
+    desc: List all proto files in the project
+    cmds:
+      - echo "Proto files in project"
+      - find {{.PROTO_DIRECTORY}} -name "*.proto" -type f
+    silent: false
+  
+  watch:
+    desc: Watch proto files
+    cmds:
+      - echo "Watching proto files... "
+      - echo "Press Ctrl+C to stop watching"
+      - |
+        watchexec --exts proto --watch {{.PROTO_DIRECTORY}} -- task generate-all
+    preconditions:
+      - sh: command -v watchexec
+        msg: "watchexec is not installed. Install with: cargo install watchexec-cli"
+  
+  install-tools:
+    desc: Install all required code tools
+    cmds:
+      - echo "Installing protoc tools... "
+      - sudo dnf install -y protobuf-compiler protobuf-devel
+      - echo "Installing Go protoc plugins... "
+      - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+      - echo "All tools installed successfully"
+  
+  help:
+    desc: Show help information
+    cmds:
+      - echo "Available tasks"
+      - task --list
+      - echo ""
+      - echo "Common usage"
+      - echo "  task
+      - echo "  task generate-user
+      - echo "  task validate
+      - echo "  task clean-generate
+      - echo "  task watch
