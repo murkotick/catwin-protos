@@ -1,0 +1,356 @@
+syntax = "proto3";
+
+package catwin.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/murkotick/catwin-protos/gen/go/events";
+
+service EventsService {
+	rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+	rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+
+	rpc ListEvent(ListEventRequest) returns (ListEventResponse);
+
+	rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+	rpc UpdateEventStatus(UpdateEventStatusRequest) returns (UpdateEventStatusResponse);
+
+	rpc RecordResult(RecordResultRequest) returns (RecordResultResponse);
+	rpc UpdateResult(UpdateResultRequest) returns (UpdateResultResponse);
+
+	rpc GetEventsByStatus(GetEventsByStatusRequest) returns (GetEventsByStatusResponse);
+	rpc GetResultHistory(GetResultHistoryRequest) returns (GetResultHistoryResponse);
+
+	rpc SyncExternalData(SyncExternalDataRequest) returns (SyncExternalDataResponse);
+}
+
+message Event {
+	string event_id = 1;
+	string external_id = 2;
+
+	SportType sport_type = 3;
+
+	string competition = 4;
+
+	string event_name = 5;
+
+	string description = 6;
+
+	google.protobuf.Timestamp scheduled_start = 7;
+	google.protobuf.Timestamp actual_start = 8;
+	google.protobuf.Timestamp completed_at = 9;
+
+	EventStatus status = 10;
+
+	repeated Participant participants = 11;
+
+	Location location = 12;
+
+	Result result = 13;
+
+	map<string, string> metadata = 14;
+
+	DataSource source = 15;
+
+	google.protobuf.Timestamp created_at = 16;
+	google.protobuf.Timestamp update_at = 17;
+
+	int64 version = 18;
+}
+
+enum SportType {
+	SPORT_TYPE_SOCCER = 0;
+	SPORT_TYPE_BASKETBALL = 1;
+	SPORT_TYPE_TENNIS = 2;
+}
+
+enum EventStatus {
+	EVENT_STATUS_SCHEDULED = 0;
+	EVENT_STATUS_UPCOMING = 1;
+	EVENT_STATUS_LIVE = 2;
+	EVENT_STATUS_CANCELLED = 3;
+	EVENT_STATUS_COMPLETED = 4;
+}
+
+message Participant {
+	string participant_id = 1;
+	string external_id = 2;
+
+	string name = 3;
+
+	ParticipantType type = 4;
+
+	string position = 5;
+
+	map<string, string> metadata = 6;
+}
+
+enum ParticipantType {
+	PARTICIPANT_TYPE_TEAM = 0;
+	PARTICIPANT_TYPE_INDIVIDUAL = 1;
+	PARTICIPANT_TYPE_DRIVER = 2;
+}
+
+message Location {
+	string venue = 1;
+
+	string city = 2;
+
+	string country = 3;
+}
+
+message Result {
+	string result_id = 1;
+	string event_id = 2;
+
+	bool is_official = 3;
+
+	Outcome outcome = 4;
+
+	repeated Score scores = 5;
+
+	string notes = 6;
+
+	google.protobuf.Timestamp recorded_at = 8;
+}
+
+message Outcome {
+	OutcomeType type = 1;
+
+	string winner_id = 2;
+
+	repeated string placements = 3;
+
+	map<string, string> details = 4;
+}
+
+enum OutcomeType {
+	OUTCOME_TYPE_WIN = 0;
+	OUTCOME_TYPE_DRAW = 1;
+	OUTCOME_TYPE_PLACEMENT = 2;
+}
+
+message Score {
+	string participant_id = 1;
+
+	string value = 2;
+
+	// breakdown of scoring by period
+	// for soccer scores by half, for basketball scores by quarter, etc..
+	repeated PeriodScore periods = 3;
+}
+
+message PeriodScore {
+	string period_name = 1;
+
+	string value = 2;
+}
+
+message DataSource {
+	string provider = 1;
+
+	google.protobuf.Timestamp last_sync = 2;
+}
+
+message EventUpdate {
+	Event event = 1;
+
+	UpdateType update_type = 2;
+
+	google.protobuf.Timestamp update_at = 3;
+}
+
+enum UpdateType {
+	UPDATE_TYPE_STATUS_CHANGE = 0;
+	UPDATE_TYPE_SCORE_UPDATE = 1;
+	UPDATE_TYPE_RESULT_RECORDED = 2;
+	UPDATE_TYPE_RESULT_OFFICIAL = 3;
+	UPDATE_TYPE_CORRECTION = 4;
+	UPDATE_TYPE_CANCELLATION = 5;
+}
+
+message CreateEventRequest {
+	SportType sport_type = 1;
+
+	string competition = 2;
+
+	string name = 3;
+
+	string description = 4;
+
+	google.protobuf.Timestamp scheduled_start = 5;
+
+	repeated Participant participants = 6;
+
+	Location location = 7;
+
+	string external_id = 8;
+
+	map<string, string> metadata = 9;
+
+	DataSource source = 10;
+}
+
+message CreateEventResponse {
+	Event event = 1;
+}
+
+message GetEventRequest {
+	// can retrieve by either internal or external ID
+	oneof identifier {
+		string event_id = 1;
+		string external_id = 2;
+	}
+}
+
+message GetEventResponse {
+	Event event = 1;
+}
+
+message ListEventRequest {
+	repeated SportType sport_types = 1;
+	repeated EventStatus statuses = 2;
+
+	string competition = 3;
+
+	google.protobuf.Timestamp start_date = 4;
+	google.protobuf.Timestamp end_date = 5;
+
+	int32 page_size = 6;
+	string page_token = 7;
+
+	SortOrder sort_order = 8;
+}
+
+enum SortOrder {
+	SORT_ORDER_START_TIME_ASC = 0;
+	SORT_ORDER_START_TIME_DESC = 1;
+	SORT_ORDER_POPULARITY = 2;
+	SORT_ORDER_RECENTLY_UPDATED = 3;
+}
+
+message ListEventResponse {
+	repeated Event events = 1;
+	
+	string next_page_token = 2;
+	int64 total_count = 3;
+}
+
+message UpdateEventRequest {
+	string event_id = 1;
+
+	// only fields that can be modified
+	string name = 2;
+	string description = 3;
+	google.protobuf.Timestamp scheduled_start = 4;
+	repeated Participant participants = 5;
+	Location location = 6;
+	map<string, string> metadata = 7;
+
+	string update_reason = 8;
+}
+
+message UpdateEventResponse {
+	Event event = 1;
+}
+
+message UpdateEventStatusRequest {
+	string event_id = 1;
+
+	EventStatus new_status = 2;
+
+	google.protobuf.Timestamp status_changed_at = 3;
+
+	string reason = 4;
+
+	google.protobuf.Timestamp actual_start = 5;
+}
+
+message UpdateEventStatusResponse {
+	Event event = 1;
+}
+
+message RecordResultRequest {
+	string event_id = 1;
+
+	Outcome outcome = 2;
+
+	repeated Score scores = 3;
+
+	bool is_official = 4;
+
+	string notes = 5;
+
+	string recorded_by = 6;
+}
+
+message RecordResultResponse {
+	Event event = 1;
+	Result result = 2;
+
+	// whether bet settlement was triggered
+	bool settlement_triggered = 3;
+}
+
+message UpdateResultRequest {
+	string event_id = 1;
+	
+	string result_id = 2;
+
+	Outcome outcome = 3;
+
+	repeated Score scores = 4;
+
+	bool is_official = 5;
+
+	string correction_reason = 6;
+
+	string corrected_by = 7;
+}
+
+message UpdateResultResponse {
+	Event event = 1;
+	Result update_result = 2;
+
+	// whether bet settlement was triggered
+	bool resettlement_triggered = 3;
+}
+
+message GetEventsByStatusRequest {
+	repeated EventStatus statuses = 1;
+
+	int32 page_size = 2;
+	string page_token = 3;
+}
+
+message GetEventsByStatusResponse {
+	repeated Event events = 1;
+	string next_page_token = 2;
+	int64 total_count = 3;
+}
+
+message GetResultHistoryRequest {
+	string event_id = 1;
+}
+
+message GetResultHistoryResponse {
+	repeated Result results = 1;
+
+	Result current_result = 2;
+}
+
+message SyncExternalDataRequest {
+	string provider = 1;
+
+	repeated SportType sport_types = 2;
+
+	repeated EventStatus statuses = 3;
+}
+
+message SyncExternalDataResponse {
+	int32 events_synced = 1;
+
+	repeated string errors = 2;
+
+	google.protobuf.Timestamp synced_at = 3;
+}
