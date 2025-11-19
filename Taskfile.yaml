@@ -25,13 +25,13 @@ tasks:
     deps:
       - check-tools
       - clean-generated
+      - create-path
     cmds:
       - task: generate-user
       - task: generate-wallet
       - task: generate-events
       - task: generate-odds
-      # TODO
-      # task: generate-betting
+      - task: generate-betting
     silent: false
   
   generate-user:
@@ -114,8 +114,26 @@ tasks:
           {{.PROTO_DIRECTORY}}/odds/*.proto
       - echo "Odds service generation complete"
 
-  # TODO
-  # generate-betting:
+  generate-betting:
+    desc: Generate Go code for betting service
+    sources:
+      - "{{.PROTO_DIRECTORY}}/betting/*.proto"
+    generates:
+      - "{{.GEN_DIRECTORY}}/go/betting/*.pb.go"
+      - "{{.GEN_DIRECTORY}}/go/betting/*_grpc.pb.go"
+    cmds:
+      - echo "Generating betting service"
+      - |
+        protoc \
+          --go_out={{.GEN_DIRECTORY}}/go \
+          --go_opt=paths=source_relative \
+          --go-grpc_out={{.GEN_DIRECTORY}}/go \
+          --go-grpc_opt=paths=source_relative \
+          --proto_path={{.PROTO_DIRECTORY}} \
+          --proto_path={{.SYSTEM_INCLUDE}} \
+          {{.PROTO_DIRECTORY}}/betting/*.proto
+      - echo "Betting service generation complete"
+
 
   check-tools:
     desc: Verify that required code generation tools are installed
@@ -157,7 +175,7 @@ tasks:
       - rm -rf {{.GEN_DIRECTORY}}/go/wallet/*
       - rm -rf {{.GEN_DIRECTORY}}/go/events/*
       - rm -rf {{.GEN_DIRECTORY}}/go/odds/*
-      # rm -rf {{.GEN_DIRECTORY}}/go/betting/*
+      - rm -rf {{.GEN_DIRECTORY}}/go/betting/*
       - echo "Generated files cleaned"
   
   validate:

@@ -1,0 +1,719 @@
+syntax = "proto3";
+
+package catwin.betting.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/murkotick/catwin-protos/gen/go/betting";
+
+service BettingService {
+	rpc PlaceBet(PlaceBetRequest) returns (PlaceBetResponse);
+
+	rpc GetBet(GetBetRequest) returns (GetBetResponse);
+
+	rpc ListBets(ListBetsRequest) returns (ListBetsResponse);
+
+	rpc CancelBet(CancelBetRequest) returns (CancelBetResponse);
+
+	rpc GetBetStatus(GetBetStatusRequest) returns (GetBetStatusResponse);
+
+	rpc ValidateBet(ValidateBetRequest) returns (ValidateBetResponse);
+
+	rpc CalculatePotentialPayout(CalculatePotentialPayoutRequest) returns (CalculatePotentialPayoutResponse);
+
+	rpc SettleEvent(SettleEventRequest) returns (SettleEventResponse);
+
+	rpc SettleBet(SettleBetRequest) returns (SettleBetResponse);
+
+	rpc VoidBet(VoidBetRequest) returns (VoidBetResponse);
+
+	rpc GetBetsByEvent(GetBetsByEventRequest) returns (GetBetsByEventResponse);
+
+	rpc GetUnsettledBets(GetUnsettledBetsRequest) returns (GetUnsettledBetsResponse);
+
+	rpc ReconcileBet(ReconcileBetRequest) returns (ReconcileBetResponse);
+
+	rpc GetBettingStats(GetBettingStatsRequest) returns (GetBettingStatsResponse);
+
+	rpc SubscribeToBetUpdates(SubscribeToBetUpdatesRequest) returns (stream BetUpdate);
+
+	rpc ReprocessFailedSettlement(ReprocessFailedSettlementRequest) returns (ReprocessFailedSettlementResponse);
+}
+
+message Bet {
+	string bet_id = 1;
+
+	string user_id = 2;
+	
+	int64 stake_cents = 3;
+
+	BetType bet_type = 5;
+
+	repeated Selection selections = 6;
+
+	BetStatus status = 7;
+
+	int64 potential_payout_cents = 8;
+
+	int64 potential_profit_cents = 9;
+
+	int64 actual_payout_cents = 10;
+
+	google.protobuf.Timestamp placed_at = 11;
+
+	google.protobuf.Timestamp settled_at = 12;
+
+	BetResult result = 13;
+
+	string idempotency_key = 14;
+
+	string wallet_hold_id = 15;
+
+	string wallet_transaction_id = 16;
+
+	map<string, string> metadata = 17;
+
+	string source = 18;
+
+	string ip_address = 19;
+
+	int64 version = 20;
+}
+
+enum BetType {
+	BET_TYPE_SINGLE = 0;
+	BET_TYPE_ACCUMULATOR = 1;
+}
+
+enum BetStatus {
+	BET_STATUS_PENDING = 0;
+	BET_STATUS_ACTIVE = 1;
+	BET_STATUS_SETTLED_WON = 2;
+	BET_STATUS_SETTLED_LOST = 3;
+	BET_STATUS_SETTLED_VOID = 4;
+	BET_STATUS_CANCELLED = 5;
+	BET_STATUS_SETTLEMENT_PENDING = 6;
+	BET_STATUS_SETTLEMENT_FAILED = 7;
+}
+
+enum BetResult {
+	BET_RESULT_WON = 0;
+	BET_RESULT_LOST = 1;
+	BET_RESULT_VOID = 2;
+}
+
+message Selection {
+	string selection_id = 1;
+
+	string event_id = 2;
+
+	string market_id = 3;
+
+	string outcome_id = 4;
+
+	OddsSnapshot odds = 5;
+
+	SelectionStatus status = 6;
+
+	SelectionResult result = 7;
+
+	string description = 8;
+
+	google.protobuf.Timestamp selected_at = 9;
+}
+
+enum SelectionStatus {
+	SELECTION_STATUS_PENDING = 0;
+	SELECTION_STATUS_WON = 1;
+	SELECTION_STATUS_LOST = 2;
+	SELECTION_STATUS_VOID = 3;
+}
+
+enum SelectionResult {
+	SELECTION_RESULT_WON = 0;
+	SELECTION_RESULT_LOST = 1;
+	SELECTION_RESULT_VOID = 2;	
+}
+
+message OddsSnapshot {
+	double decimal_odds = 1;
+
+	string display_odds = 2;
+
+	string odds_format = 3;
+
+	google.protobuf.Timestamp captured_at = 4;
+
+	string odds_history_id = 5;
+}
+
+message PlaceBetRequest {
+	string user_id = 1;
+
+	int64 stake_cents = 2;
+
+	string currency = 3;
+
+	BetType bet_type = 4;
+
+	repeated SelectionRequest selections = 5;
+
+	string idempotency_key = 6;
+
+	double max_odds_change_percentage = 7;
+
+	string source = 8;
+
+	string ip_address = 9;
+
+	map<string, string> metadata = 10;
+}
+
+message SelectionRequest {
+	string event_id = 1;
+
+	string market_id = 2;
+	
+	string outcome_id = 3;
+
+	double expected_odds = 4;
+
+	string description = 5;
+}
+
+message PlaceBetResponse {
+	Bet bet = 1;
+
+	bool odds_changed = 2;
+
+	repeated OddsChange odds_changes = 3;
+
+	PlacementConfirmation confirmation = 4;
+}
+
+message OddsChange {
+	string selection_id = 1;
+
+	double expected_odds = 2;
+
+	double actual_odds = 3;
+
+	double percentage_change = 4;
+
+	bool exceeded_tolerance = 5;
+}
+
+message PlacementConfirmation {
+	string bet_reference = 1;
+
+	string stake_display = 2;
+
+	string potential_payout_display = 3;
+
+	string potential_profit_display = 4;
+
+	string placed_at_display = 5;
+}
+
+message GetBetRequest {
+	oneof identifier {
+		string bet_id = 1;
+
+		string idempotency_key = 2;
+	}
+
+	string user_id = 3;
+}
+
+message GetBetResponse {
+	Bet bet = 1;
+
+	repeated EventStatus event_statuses = 2;
+}
+
+message EventStatus {
+	string event_id = 1;
+
+	string event_name = 2;
+
+	string current_status = 3;
+
+	google.protobuf.Timestamp scheduled_start = 4;
+}
+
+message ListBetsRequest {
+	string user_id = 1;
+
+	repeated BetStatus statuses = 2;
+	
+	repeated BetType bet_types = 3;
+
+	google.protobuf.Timestamp start_date = 4;
+
+	google.protobuf.Timestamp end_date = 5;
+
+	string event_id = 6;
+
+	int32 page_size = 7;
+
+	string page_token = 8;
+
+	BetSortOrder sort_order = 9;
+}
+
+enum BetSortOrder {
+	BET_SORT_ORDER_PLACED_DESC = 0;
+	BET_SORT_ORDER_PLACED_ASC = 1;
+	BET_SORT_ORDER_STAKE_DESC = 2;
+	BET_SORT_ORDER_PAYOUT_DESC = 3;
+}
+
+message ListBetsResponse {
+	repeated Bet bets = 1;
+
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+
+	BetSummary summary = 4;
+}
+
+message BetSummary {
+	int64 total_bets = 1;
+	
+	int64 total_stake_cents = 2;
+	
+	int64 total_payout_cents = 3;
+
+	int64 net_profit_cents = 4;
+
+	int32 bets_won = 5;
+
+	int32 bets_lost = 6;
+
+	double win_rate_percentage = 7;
+}
+
+message CancelBetRequest {
+	string bet_id = 1;
+
+	string user_id = 2;
+
+	string reason = 3;
+}
+
+message CancelBetResponse {
+	Bet bet = 1;
+
+	bool funds_released = 2;
+
+	string message = 3;
+}
+
+message GetBetStatusRequest {
+	string bet_id = 1;
+
+	bool include_live_status = 2;
+}
+
+message GetBetStatusResponse {
+	BetStatus status = 1;
+	BetResult result = 2;
+
+	repeated SelectionStatusInfo selection_statuses = 3;
+
+	google.protobuf.Timestamp settled_at = 4;
+
+	int64 payout_cents = 5;
+
+	repeated LiveEventInfo live_events = 6;
+}
+
+message SelectionStatusInfo {
+	string selection_id = 1;
+	
+	string description = 2;
+	
+	SelectionStatus status = 3;
+	
+	SelectionResult result = 4;
+	
+	string event_status = 5;
+}
+
+message LiveEventInfo {
+	string event_id = 1;
+
+	string event_name = 2;
+
+	string current_score = 3;
+
+	string time_elapsed = 4;
+
+	bool is_live = 5;
+}
+
+message ValidateBetRequest {
+	string user_id = 1;
+
+	int64 stake_cents = 2;
+
+	string currency = 3;
+
+	BetType bet_type = 4;
+
+	repeated SelectionRequest selections = 5;
+}
+
+message ValidateBetResponse {
+	bool is_valid = 1;
+
+	repeated ValidationError errors = 2;
+
+	repeated ValidationWarning warnings = 3;
+
+	PayoutInfo potential_payout = 4;
+}
+
+message ValidationError {
+	ErrorCode code = 1;
+
+	string message = 2;
+
+	string field = 3;
+
+	repeated string affected_selection_ids = 4;
+}
+
+enum ErrorCode {
+	ERROR_CODE_INSUFFICIENT_FUNDS = 0;
+	ERROR_CODE_MARKET_SUSPENDED = 1;
+	ERROR_CODE_ODDS_CHANGED = 2;
+	ERROR_CODE_BETTING_CLOSED = 3;
+	ERROR_CODE_EVENT_NOT_FOUND = 4;
+	ERROR_CODE_STAKE_TOO_LOW = 5;
+	ERROR_CODE_STAKE_TOO_HIGH = 6;
+}
+
+message ValidationWarning {
+	WarningCode code = 1;
+
+	string message = 2;
+}
+
+enum WarningCode {
+	WARNING_CODE_ODDS_DRIFT = 0;
+	WARNING_CODE_HIGH_RISK = 1;
+	WARNING_CODE_LIMITED_LIQUIDITY = 2;
+}
+
+message PayoutInfo {
+	int64 potential_payout_cents = 1;
+
+	int64 potential_profit_cents = 2;
+
+	double combined_odds = 3;
+
+	string payout_display = 4;
+
+	string profit_display = 5;
+}
+
+message CalculatePotentialPayoutRequest {
+	int64 stake_cents = 1;
+
+	string currency = 2;
+
+	BetType bet_type = 3;
+
+	repeated SelectionRequest selections = 4;
+}
+
+message CalculatePotentialPayoutResponse {
+	PayoutInfo payout = 1;
+
+	PayoutBreakdown breakdown = 2;
+}
+
+message PayoutBreakdown {
+	repeated SelectionContribution selection_contributions = 1;
+
+	string calculated_method = 2;
+
+	string explanation = 3;
+}
+
+message SelectionContribution {
+	string selection_id = 1;
+
+	double odds = 2;
+
+	string contribution = 3;
+}
+
+message SettleEventRequest {
+	string event_id = 1;
+
+	repeated MarketResult market_results = 2;
+
+	string idempotency_key = 3;
+
+	string settled_by = 4;
+}
+
+message MarketResult {
+	string market_id = 1;
+
+	repeated string winning_outcome_ids = 2;
+
+	bool is_void = 3;
+
+	string void_reason = 4;
+}
+
+message SettleEventResponse {
+	int32 bets_settled = 1;
+
+	int64 total_payout_cents = 2;
+
+	repeated  string failed_bet_ids = 3;
+
+	SettlementSummary summary = 4;
+}
+
+message SettlementSummary {
+	int32 bets_won = 1;
+
+	int32 bets_lost = 2;
+
+	int32 bets_void = 3;
+
+	int64 total_stakes_cents = 4;
+
+	int64 total_payout_cents = 5;
+
+	int64 net_result_cents = 6;
+}
+
+message SettleBetRequest {
+	string bet_id = 1;
+
+	repeated SelectionSettlement selectin_settlements = 2;
+
+	string settled_by = 3;
+
+	string reason = 4;
+}
+
+message SelectionSettlement {
+	string selection_id = 1;
+
+	SelectionResult result = 2;
+
+	string reason = 3;
+}
+
+message SettleBetResponse {
+	Bet bet = 1;
+
+	int64 payout_cents = 2;
+
+	bool wallet_credited = 3;
+}
+
+message VoidBetRequest {
+	string bet_id = 1;
+
+	string reason = 2;
+
+	string voided_by = 3;
+}
+
+message VoidBetResponse {
+	Bet bet = 1;
+
+	bool stake_returned = 2;
+
+	string message = 3;
+}
+
+message GetBetsByEventRequest {
+	string event_id = 1;
+
+	repeated BetStatus statuses = 2;
+
+	int32 page_size = 3;
+
+	string page_token = 4;
+}
+
+message GetBetsByEventResponse {
+	repeated Bet bets = 1;
+	
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+
+	EventExposure exposure = 4;
+}
+
+message EventExposure {
+	string event_id = 1;
+
+	int64 total_stake_cents = 2;
+
+	int64 maximum_payout_cents = 3;
+
+	repeated OutcomeExposure outcome_exposures = 4;
+}
+
+message OutcomeExposure {
+	string outcome_id = 1;
+	
+	string outcome_name = 2;
+
+	int32 bet_count = 3;
+
+	int64 total_stake_cents = 4;
+
+	int64 potential_payout_cents = 5;
+}
+
+message GetUnsettledBetsRequest {
+	string event_id = 1;
+
+	google.protobuf.Timestamp older_than = 2;
+
+	int32 page_size = 3;
+
+	string page_token = 4;
+}
+
+message GetUnsettledBetsResponse {
+	repeated Bet bets = 1;
+
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+}
+
+message ReconcileBetRequest {
+	string bet_id = 1;
+
+	bool auto_fix = 2;
+}
+
+message ReconcileBetResponse {
+	bool is_consistent = 1;
+
+	repeated ReconciliationIssue issues = 2;
+
+	repeated string actions_taken = 3;
+}
+
+message ReconciliationIssue {
+	IssueSeverity severity = 1;
+	
+	string description = 2;
+
+	string suggested_action = 3;
+}
+
+enum IssueSeverity {
+	ISSUE_SEVERITY_INFO = 0;
+	ISSUE_SEVERITY_WARNING = 1;
+	ISSUE_SEVERITY_ERROR = 2;
+	ISSUE_SEVERITY_CRITICAL = 3;
+}
+
+message GetBettingStatsRequest {
+	google.protobuf.Timestamp start_time = 1;
+
+	google.protobuf.Timestamp end_time = 2;
+}
+
+message GetBettingStatsResponse {
+	BettingStats stats = 1;
+
+	google.protobuf.Timestamp period_start = 2;
+	
+	google.protobuf.Timestamp period_end = 3;
+}
+
+message BettingStats {
+	int64 total_bets = 1;
+
+	int64 total_stake_cents = 2;
+
+	int64 total_payout_cents = 3;
+
+	int64 net_result_cents = 4;
+
+	map<string, int64> bets_by_status = 5;
+
+	map<string, int64> bets_by_type = 6;
+
+	int64 average_stake_cents = 7;
+
+	int64 largest_bet_cents = 8;
+
+	double win_rate = 9;
+
+	double rtp_percentage = 10;
+
+	double hold_percentage = 11;
+}
+
+message SubscribeToBetUpdatesRequest {
+	repeated string bet_ids = 1;
+
+	string user_id = 2;
+
+	repeated string event_ids = 3;
+	
+	repeated BetUpdateType update_types = 4;
+}
+
+message BetUpdate {
+	string bet_id = 1;
+	
+	BetUpdateType update_type = 2;
+	
+	Bet bet = 3;
+	
+	google.protobuf.Timestamp update_at = 4;
+
+	string update_reason = 5;
+}
+
+enum BetUpdateType {
+	BET_UPDATE_TYPE_PLACED = 0;
+	BET_UPDATE_TYPE_STATUS_CHANGE = 1;
+	BET_UPDATE_TYPE_SETTLED = 2;
+	BET_UPDATE_TYPE_CANCELLED = 3;
+	BET_UPDATE_TYPE_VOIDED = 4;
+}
+
+message ReprocessFailedSettlementRequest {
+	string bet_id = 1; 
+
+	string event_id = 2;
+
+	string requested_by = 3;
+}
+
+message ReprocessFailedSettlementResponse {
+	int32 successful_count = 1;
+
+	repeated FailedSettlement still_failde = 2;
+}
+
+message FailedSettlement {
+	string bet_id = 1;
+
+	string error_message = 2;
+
+	google.protobuf.Timestamp last_attempt = 3;
+
+	int32 retry_count = 4;
+}
