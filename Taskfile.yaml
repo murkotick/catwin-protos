@@ -25,7 +25,6 @@ tasks:
     deps:
       - check-tools
       - clean-generated
-      - create-path
     cmds:
       - task: generate-user
       - task: generate-wallet
@@ -43,6 +42,7 @@ tasks:
       - "{{.GEN_DIRECTORY}}/go/user/*_grpc.pb.go"
     cmds:
       - echo "Generating user service"
+      - mkdir -p {{.GEN_DIRECTORY}}/go/user
       - |
         protoc \
           --go_out={{.GEN_DIRECTORY}}/go \
@@ -63,6 +63,7 @@ tasks:
       - "{{.GEN_DIRECTORY}}/go/wallet/*_grpc.pb.go"
     cmds:
       - echo "Generating wallet service"
+      - mkdir -p {{.GEN_DIRECTORY}}/go/wallet
       - |
         protoc \
           --go_out={{.GEN_DIRECTORY}}/go \
@@ -83,6 +84,7 @@ tasks:
       - "{{.GEN_DIRECTORY}}/go/events/*_grpc.pb.go"
     cmds:
       - echo "Generating events service"
+      - mkdir -p {{.GEN_DIRECTORY}}/go/events
       - |
         protoc \
           --go_out={{.GEN_DIRECTORY}}/go \
@@ -103,6 +105,7 @@ tasks:
       - "{{.GEN_DIRECTORY}}/go/odds/*_grpc.pb.go"
     cmds:
       - echo "Generating odds service"
+      - mkdir -p {{.GEN_DIRECTORY}}/go/odds
       - |
         protoc \
           --go_out={{.GEN_DIRECTORY}}/go \
@@ -123,6 +126,7 @@ tasks:
       - "{{.GEN_DIRECTORY}}/go/betting/*_grpc.pb.go"
     cmds:
       - echo "Generating betting service"
+      - mkdir -p {{.GEN_DIRECTORY}}/go/betting
       - |
         protoc \
           --go_out={{.GEN_DIRECTORY}}/go \
@@ -177,7 +181,7 @@ tasks:
       - rm -rf {{.GEN_DIRECTORY}}/go/odds/*
       - rm -rf {{.GEN_DIRECTORY}}/go/betting/*
       - echo "Generated files cleaned"
-  
+
   validate:
     desc: Validate proto files syntax without generating code
     cmds:
