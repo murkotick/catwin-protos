@@ -1,0 +1,484 @@
+syntax = 'proto3';
+
+package catwing.odds.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/murkotick/catwin-protos/gen/go/odds";
+
+service OddsService {
+	rpc CreateMarket(CreateMarketRequest) returns (CreateMarketResponse);
+
+	rpc GetMarket(GetMarketRequest) returns (GetMarketResponse);
+	
+	rpc ListMarket(ListMarketsRequest) returns (ListMarketsResponse);
+
+	rpc UpdateMarket(UpdateMarketRequest) returns (UpdateMarketResponse);
+
+	rpc SetOdds(SetOddsRequest) returns (SetOddsResponse);
+
+	rpc GetCurrentOdds(GetCurrentOddsRequest) returns (GetCurrentOddsResponse);
+
+	rpc GetOddsAtTime(GetOddsAtTimeRequest) returns (GetOddsAtTimeResponse);
+
+	rpc GetOddsHistory(GetOddsHistoryRequest) returns (GetOddsHistoryResponse);
+
+	rpc SuspendMarket(SuspendMarketRequest) returns (SuspendMarketResponse);
+	
+	rpc UnsuspendMarket(UnsuspendMarketRequest) returns (UnsuspendMarketResponse);
+
+	rpc CloseMarket(CloseMarketRequest) returns (CloseMarketResponse);
+
+	rpc CalculateImpliedProbability(CalculateImpliedProbabilityRequest) returns (CalculateImpliedProbabilityResponse);
+
+	rpc CalculatePayout(CalculatePayoutRequest) returns (CalculatePayoutResponse);
+
+	rpc SubscribeToOddsUpdates(SubscribeToOddsUpdatesRequest) returns (SubscribeToOddsUpdatesResponse);
+
+	rpc GetMarketsByEvent(GetMarketsByEventRequest) returns (GetMarketsByEventResponse);
+
+	rpc ValidateOddsConsistency(ValidateOddsConsistencyRequest) returns (ValidateOddsConsistencyResponse);
+}
+
+message Market {
+	string market_id = 1;
+
+	string event_id = 2;
+
+	MarketType market_type = 3;
+
+	string name = 4;
+
+	string description = 5;
+
+	MarketStatus status = 6;
+
+	repeated Outcome outcomes = 7;
+
+	map<string, string> parameters = 8;
+
+	google.protobuf.Timestamp created_at = 9;
+
+	google.protobuf.Timestamp updated_at = 10;
+
+	google.protobuf.Timestamp closed_at = 11;
+
+	string odds_source = 12;
+
+	map<string, string> metadata = 13;
+
+	int64 version = 14;
+}
+
+enum MarketType {
+	MARKET_TYPE_MATCH_WINNER = 0;
+	MARKET_TYPE_MONEYLINE = 1;
+	MARKET_TYPE_OVER_UNDER = 2;
+	MARKET_TYPE_BOTH_TEAMS_SCORE = 3;
+	MARKET_TYPE_OUTRIGHT = 4;
+}
+
+enum MarketStatus {
+	MARKET_STATUS_PENDING = 0;
+	MARKET_STATUS_OPEN = 1;
+	MARKET_STATUS_SUSPENDED = 3;
+	MARKET_STATUS_CLOSED = 4;
+	MARKET_STATUS_CANCELLED = 5;
+}
+
+message Outcome {
+	string outcome_id = 1;
+
+	string market_id = 2;
+
+	string name = 3;
+
+	string description = 4;
+
+	string participant_id = 5;
+
+	OddsValue current_odds = 6;
+
+	bool is_available = 7;
+
+	google.protobuf.Timestamp odds_update_at = 8;
+
+	int32 display_order = 9;
+}
+
+message OddsValue {
+	double decimal_odds = 1;
+
+	double implied_probability = 2;
+
+	double margin = 3;
+}
+
+message OddsHistory {
+	string history_id = 1;
+
+	string market_id = 2;
+
+	string outcome_id = 3;
+
+	OddsValue odds = 4;
+
+	google.protobuf.Timestamp effective_at = 5;
+
+	string change_source = 6;
+
+	string changed_by = 7;
+
+	string change_reason = 8;
+
+	OddsValue previous_odds = 9;
+
+	double change_percentage = 10;
+}
+
+message OddsUpdate {
+	string market_id = 1;
+
+	string outcome_id = 2;
+
+	OddsValue new_odds = 3;
+
+	OddsValue previous_odds = 4;
+
+	google.protobuf.Timestamp updated_at = 5;
+
+	UpdateType updated_type = 6;
+}
+
+enum UpdateType {
+	UPDATE_TYPE_CHANGE = 0;
+	UPDATE_TYPE_MARKET_OPENED = 1;
+	UPDATE_TYPE_MARKET_SUSPENDED = 2;
+	UPDATE_TYPE_MARKET_CLOSED = 3;
+}
+
+message ConvertedOdds {
+	string decimal = 1;
+
+	string fractional = 2;
+
+	string american = 3;
+
+	double decimal_value = 4;
+}
+
+message CreateMarketRequest {
+	string event_id = 1;
+
+	MarketType market_type = 2;
+
+	string name = 3;
+	
+	string description = 4;
+
+	repeated OutcomeDefinition outcomes = 5;
+
+	map<string, string> parameters = 6;
+
+	string odds_source = 7;
+
+	bool open_immediately = 8;
+}
+
+message OutcomeDefinition {
+	string name = 1;
+	
+	string description = 2;
+
+	string participant_id = 3;
+	
+	OddsValue initial_odds = 4;
+
+	int32 display_order = 5;
+}
+
+message CreateMarketResponse {
+	Market market_id = 1;
+}
+
+message GetMarketRequest {
+	string market_id = 1;
+
+	bool include_current_odds = 2;
+}
+
+message GetMarketResponse {
+	Market market = 1;
+}
+
+message ListMarketsRequest {
+	string event_id = 1;
+
+	repeated MarketType market_types = 2;
+
+	repeated MarketStatus statuses = 3;
+
+	bool include_current_odds = 4;
+
+	int32 page_size = 5;
+
+	string page_token = 6;
+}
+
+message ListMarketsResponse {
+	repeated Market markets = 1;
+
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+}
+
+message UpdateMarketRequest {
+	string market_id = 1;
+
+	string name = 2;
+	string description = 3;
+	map<string, string> parameters = 4;
+	map<string, string> metadata = 5;
+
+	int64 expected_version = 6;
+}
+
+message UpdateMarketResponse {
+	Market market = 1;
+}
+
+message SetOddsRequest {
+	string market_id = 1;
+
+	repeated OddsChange changes = 2;
+
+	google.protobuf.Timestamp effective_at = 3;
+
+	string source = 4;
+
+	string changed_by = 5;
+
+	string reason = 6;
+}
+
+message OddsChange {
+	string outcome_id = 1;
+	
+	OddsValue new_odds = 2;
+
+	bool is_available = 3;
+}
+
+message SetOddsResponse {
+	Market market = 1;
+
+	repeated OddsHistory history_records = 2;
+
+	bool triggered_alert = 3;
+}
+
+message GetCurrentOddsRequest {
+	repeated string market_ids = 1;
+
+	OddsFormat display_format = 2;
+}
+
+enum OddsFormat {
+	ODDS_FORMAT_DECIMAL = 0;
+	ODDS_FORMAT_FRACTIONAL = 1;
+	ODDS_FORMAT_AMERICAN = 2;
+	ODDS_FORMAT_ALL = 3;
+}
+
+message GetCurrentOddsResponse {
+	repeated MarketOdds market_odds = 1;
+
+	google.protobuf.Timestamp as_of = 2;
+}
+
+message MarketOdds {
+	string market_id = 1;
+
+	MarketStatus market_status = 2;
+
+	repeated OutcomeOdds outcome_odds = 3;
+}
+
+message OutcomeOdds {
+	string outcome_id = 1;
+
+	string outcome_name = 2;
+
+	ConvertedOdds odds = 3;
+
+	bool is_available = 4;
+
+	google.protobuf.Timestamp updated_at = 5;
+}
+
+message GetOddsAtTimeRequest {
+	string market_id = 1;
+
+	string outcome_id = 2;
+
+	google.protobuf.Timestamp timestamp = 3;
+
+	OddsFormat display_format = 4;
+}
+
+message GetOddsAtTimeResponse {
+	MarketOdds odds = 1;
+
+	google.protobuf.Timestamp effective_at = 2;
+}
+
+message GetOddsHistoryRequest {
+	string market_id = 1;
+
+	string outcome_id = 2;
+
+	google.protobuf.Timestamp start_time = 3;
+	
+	google.protobuf.Timestamp end_time = 4;
+
+	int32 page_size = 5;
+	string page_token = 6;
+}
+
+message GetOddsHistoryResponse {
+	repeated OddsHistory history = 1;
+
+	string next_page_token = 2;
+
+	int64 total_count = 3;
+}
+
+message SuspendMarketRequest {
+	string market_id = 1;
+
+	string reason = 2;
+
+	string suspended_by = 3;
+}
+
+message SuspendMarketResponse {
+	Market market = 1;
+}
+
+message UnsuspendMarketRequest {
+	string market_id = 1;
+
+	string reason = 2;
+
+	string unsuspended_by = 3;
+
+	repeated OddsChange updated_odds = 4;
+}
+
+message UnsuspendMarketResponse {
+	Market market = 1;
+}
+
+message CloseMarketRequest {
+	string market_id = 1;
+
+	string reason = 2;
+}
+
+message CloseMarketResponse {
+	Market market = 1;
+}
+
+message CalculateImpliedProbabilityRequest {
+	OddsValue odds = 1;
+}
+
+message CalculateImpliedProbabilityResponse {
+	double probability = 1;
+
+	string probability_percentage = 2;
+}
+
+message CalculatePayoutRequest {
+	OddsValue odds = 1;
+
+	int64 stake_cents = 2;
+
+	string currency = 3;
+}
+
+message CalculatePayoutResponse {
+	int64 total_payout_cents = 1;
+
+	int64 profit_cents = 2;
+
+	string total_payout_display = 3;
+	string profit_display = 4;
+}
+
+message SubscribeToOddsUpdatesRequest {
+	repeated string market_ids = 1;
+
+	repeated string event_ids = 2;
+
+	repeated MarketType market_types = 3;
+
+	repeated UpdateType updated_types = 4;
+}
+
+message SubscribeToOddsUpdatesResponse {
+	string event_id = 1;
+
+	repeated MarketType market_types = 2;
+	
+	repeated MarketStatus statuses = 3;
+
+	bool include_current_odds = 4;
+}
+
+message GetMarketsByEventRequest {
+	string event_id = 1;
+
+	repeated MarketType market_types = 2;
+
+	repeated MarketStatus statuses = 3;
+
+	bool include_current_odds = 4;
+}
+
+message GetMarketsByEventResponse {
+	repeated Market markets = 1;
+
+	int64 total_count = 2;
+}
+
+message ValidateOddsConsistencyRequest {
+	repeated string market_ids = 1;
+}
+
+message ValidateOddsConsistencyResponse {
+	bool is_consistent = 1;
+
+	repeated ConsistencyIssue issues = 2;
+
+	double total_implied_probability = 3;
+
+	double margin_percentage = 4;
+}
+
+message ConsistencyIssue {
+	Severity severity = 1;
+
+	string description = 2;
+
+	repeated string affected_market_ids = 3;
+
+	repeated string affected_outcome_ids = 4;
+}
+
+enum Severity {
+	SEVERITY_INFO = 0;
+	SEVERITY_WARNING = 1;
+	SEVERITY_ERROR = 2;
+}
