@@ -21,6 +21,8 @@ service EventsService {
 	rpc GetEventsByStatus(GetEventsByStatusRequest) returns (GetEventsByStatusResponse);
 	rpc GetResultHistory(GetResultHistoryRequest) returns (GetResultHistoryResponse);
 
+	rpc SubscribeToEventUpdates(SubscribeToEventUpdatesRequest) returns (stream EventUpdate);
+
 	rpc SyncExternalData(SyncExternalDataRequest) returns (SyncExternalDataResponse);
 }
 
@@ -158,6 +160,8 @@ message EventUpdate {
 	UpdateType update_type = 2;
 
 	google.protobuf.Timestamp update_at = 3;
+
+	repeated string changed_fields = 4;
 }
 
 enum UpdateType {
@@ -337,6 +341,16 @@ message GetResultHistoryResponse {
 	repeated Result results = 1;
 
 	Result current_result = 2;
+}
+
+message SubscribeToEventUpdatesRequest {
+	repeated string event_ids = 1;
+
+	repeated SportType sport_types = 2;
+
+	repeated EventStatus statuses = 3;
+
+	repeated UpdateType update_types = 4;
 }
 
 message SyncExternalDataRequest {

@@ -33,7 +33,7 @@ service OddsService {
 
 	rpc CalculatePayout(CalculatePayoutRequest) returns (CalculatePayoutResponse);
 
-	rpc SubscribeToOddsUpdates(SubscribeToOddsUpdatesRequest) returns (SubscribeToOddsUpdatesResponse);
+	rpc SubscribeToOddsUpdates(SubscribeToOddsUpdatesRequest) returns (stream OddsUpdate);
 
 	rpc GetMarketsByEvent(GetMarketsByEventRequest) returns (GetMarketsByEventResponse);
 
@@ -425,16 +425,6 @@ message SubscribeToOddsUpdatesRequest {
 	repeated MarketType market_types = 3;
 
 	repeated UpdateType updated_types = 4;
-}
-
-message SubscribeToOddsUpdatesResponse {
-	string event_id = 1;
-
-	repeated MarketType market_types = 2;
-	
-	repeated MarketStatus statuses = 3;
-
-	bool include_current_odds = 4;
 }
 
 message GetMarketsByEventRequest {
